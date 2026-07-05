@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Focus</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+/* ── Tokens ── */
+:root {
+  --bg:         #0F0F13;
+  --bg-2:       #16161C;
+  --bg-3:       #1E1E26;
+  --border:     rgba(255,255,255,0.07);
+  --border-2:   rgba(255,255,255,0.12);
+  --green:      #7CB98A;
+  --green-dim:  rgba(124,185,138,0.12);
+  --green-glow: rgba(124,185,138,0.06);
+  --amber:      #C9966A;
+  --amber-dim:  rgba(201,150,106,0.12);
+  --blue:       #7499C9;
+  --blue-dim:   rgba(116,153,201,0.12);
+  --text-1:     #EEEAE4;
+  --text-2:     #7A7882;
+  --text-3:     #3E3D47;
+  --radius:     14px;
+  --font-display: 'DM Serif Display', Georgia, serif;
+  --font-body:    'Inter', system-ui, sans-serif;
+}
+
+/* ── Reset ── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--text-1);font-family:var(--font-body);-webkit-font-smoothing:antialiased}
+
+/* ── Layout ── */
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 20px;
+  gap: 0;
+}
+
+/* ── Header ── */
+header {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  padding: 20px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 100;
+}
+
+.logo {
+  font-family: var(--font-display);
+  font-size: 18px;
+  color: var(--text-2);
+  letter-spacing: 0.01em;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icon-btn {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.icon-btn:hover { background: var(--bg-3); color: var(--text-1); border-color: var(--border-2); }
+
+/* ── Mode tabs ── */
+.mode-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 48px;
+}
+
+.mode-tab {
+  padding: 7px 18px;
+  border-radius: 9px;
+  border: none;
+  background: none;
+  color: var(--text-2);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.18s;
+  white-space: nowrap;
+}
+
+.mode-tab.active {
+  background: var(--bg-3);
+  color: var(--text-1);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+/* ── Timer ring ── */
+.timer-wrap {
+  position: relative;
+  width: 280px;
+  height: 280px;
+  margin-bottom: 44px;
+}
+
+.ring-svg {
+  position: absolute;
+  inset: 0;
+  transform: rotate(-90deg);
+}
+
+.ring-track {
+  fill: none;
+  stroke: var(--bg-3);
+  stroke-width: 3;
+}
+
+.ring-progress {
+  fill: none;
+  stroke-width: 3;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1s linear, stroke 0.4s;
+}
+
+.timer-inner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.timer-display {
+  font-family: var(--font-display);
+  font-size: 72px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--text-1);
+  transition: color 0.4s;
+  cursor: default;
+  user-select: none;
+}
+
+.timer-label {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  transition: color 0.4s;
+}
+
+/* Session dots */
+.session-dots {
+  display: flex;
+  gap: 7px;
+  margin-bottom: 40px;
+}
+
+.session-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  border: 1.5px solid var(--text-3);
+  transition: background 0.3s, border-color 0.3s, transform 0.2s;
+}
+.session-dot.done {
+  background: var(--green);
+  border-color: var(--green);
+}
+.session-dot.active {
+  border-color: var(--green);
+  transform: scale(1.2);
+}
+
+/* ── Controls ── */
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 48px;
+}
+
+.ctrl-btn {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  transition: all 0.15s;
+}
+.ctrl-btn:hover { background: var(--bg-3); color: var(--text-1); border-color: var(--border-2); }
+.ctrl-btn:active { transform: scale(0.93); }
+
+.play-btn {
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  background: var(--green);
+  border: none;
+  color: #0F0F13;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+  transition: transform 0.15s, background 0.3s, box-shadow 0.3s;
+  box-shadow: 0 0 0 0 rgba(124,185,138,0);
+}
+.play-btn:hover {
+  transform: scale(1.06);
+  box-shadow: 0 0 24px rgba(124,185,138,0.3);
+}
+.play-btn:active { transform: scale(0.95); }
+.play-btn.break { background: var(--amber); box-shadow: 0 0 0 0 rgba(201,150,106,0); }
+.play-btn.break:hover { box-shadow: 0 0 24px rgba(201,150,106,0.3); }
+.play-btn.long-break { background: var(--blue); }
+.play-btn.long-break:hover { box-shadow: 0 0 24px rgba(116,153,201,0.3); }
+
+/* ── Stats panel ── */
+.stats-panel {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  width: 100%;
+  max-width: 340px;
+}
+
+.stat-cell {
+  background: var(--bg-2);
+  padding: 18px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.stat-value {
+  font-family: var(--font-display);
+  font-size: 28px;
+  color: var(--text-1);
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+/* ── Settings modal ── */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(8px);
+  z-index: 200;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.2s;
+}
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+
+.modal {
+  background: var(--bg-2);
+  border: 1px solid var(--border-2);
+  border-radius: 20px;
+  padding: 28px;
+  width: 100%;
+  max-width: 340px;
+  transform: translateY(10px);
+  transition: transform 0.2s;
+}
+.modal-overlay.open .modal { transform: translateY(0); }
+
+.modal-title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  margin-bottom: 22px;
+  color: var(--text-1);
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.setting-row:last-of-type { border-bottom: none; }
+
+.setting-label { font-size: 14px; color: var(--text-2); }
+
+.setting-input {
+  width: 72px;
+  background: var(--bg-3);
+  border: 1px solid var(--border-2);
+  border-radius: 8px;
+  padding: 6px 10px;
+  color: var(--text-1);
+  font-family: var(--font-body);
+  font-size: 14px;
+  text-align: center;
+  outline: none;
+}
+.setting-input:focus { border-color: var(--green); }
+
+.modal-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.modal-btn {
+  flex: 1;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--text-2);
+  font-family: var(--font-body);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.modal-btn:hover { background: var(--bg-3); color: var(--text-1); }
+.modal-btn.primary {
+  background: var(--green);
+  border-color: var(--green);
+  color: #0F0F13;
+  font-weight: 600;
+}
+.modal-btn.primary:hover { filter: brightness(1.1); }
+
+/* ── Notification toast ── */
+.toast {
+  position: fixed;
+  top: 24px; left: 50%; transform: translateX(-50%) translateY(-80px);
+  background: var(--bg-2);
+  border: 1px solid var(--border-2);
+  border-radius: 100px;
+  padding: 10px 20px;
+  font-size: 13px;
+  color: var(--text-1);
+  z-index: 300;
+  transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
+  white-space: nowrap;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+/* ── Ambient background ── */
+.ambient {
+  position: fixed; inset: 0; z-index: -1;
+  pointer-events: none;
+  transition: opacity 1s;
+}
+.ambient-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0;
+  transition: opacity 2s, background 1s;
+}
+.ambient-orb.active { opacity: 1; }
+
+/* ── Responsive ── */
+@media (max-width: 480px) {
+  .timer-display { font-size: 58px; }
+  .timer-wrap { width: 240px; height: 240px; }
+  .mode-tabs { flex-wrap: wrap; justify-content: center; }
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .ring-progress { transition: stroke-dashoffset 0.1s; }
+}
+</style>
+</head>
+<body>
+
+<!-- Ambient background -->
+<div class="ambient">
+  <div class="ambient-orb" id="ambientOrb" style="width:500px;height:500px;top:10%;left:30%;background:radial-gradient(circle,rgba(124,185,138,0.07) 0%,transparent 70%)"></div>
+</div>
+
+<header>
+  <span class="logo">Focus</span>
+  <div class="header-right">
+    <button class="icon-btn" id="soundBtn" title="Toggle sound">🔔</button>
+    <button class="icon-btn" id="settingsBtn" title="Settings">⚙</button>
+  </div>
+</header>
+
+<div class="app">
+
+  <!-- Mode tabs -->
+  <div class="mode-tabs" role="tablist">
+    <button class="mode-tab active" data-mode="focus" role="tab">Focus</button>
+    <button class="mode-tab" data-mode="short" role="tab">Short break</button>
+    <button class="mode-tab" data-mode="long" role="tab">Long break</button>
+  </div>
+
+  <!-- Timer ring -->
+  <div class="timer-wrap" aria-live="polite" aria-atomic="true">
+    <svg class="ring-svg" viewBox="0 0 280 280">
+      <circle class="ring-track" cx="140" cy="140" r="130"/>
+      <circle class="ring-progress" id="ringProgress" cx="140" cy="140" r="130"/>
+    </svg>
+    <div class="timer-inner">
+      <div class="timer-display" id="timerDisplay">25:00</div>
+      <div class="timer-label" id="timerLabel">focus</div>
+    </div>
+  </div>
+
+  <!-- Session dots -->
+  <div class="session-dots" id="sessionDots" aria-label="Session progress"></div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <button class="ctrl-btn" id="resetBtn" title="Restart (R)">↺</button>
+    <button class="play-btn" id="playBtn" title="Start / Pause (Space)" aria-label="Start timer">▶</button>
+    <button class="ctrl-btn" id="skipBtn" title="Skip (S)">⟫</button>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-panel">
+    <div class="stat-cell">
+      <div class="stat-value" id="statSessions">0</div>
+      <div class="stat-label">Sessions</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-value" id="statMinutes">0</div>
+      <div class="stat-label">Min focused</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-value" id="statStreak">0</div>
+      <div class="stat-label">Day streak</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Settings modal -->
+<div class="modal-overlay" id="modalOverlay" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-title">Settings</div>
+    <div class="setting-row">
+      <span class="setting-label">Focus duration (min)</span>
+      <input class="setting-input" id="setFocus" type="number" min="1" max="90" value="25"/>
+    </div>
+    <div class="setting-row">
+      <span class="setting-label">Short break (min)</span>
+      <input class="setting-input" id="setShort" type="number" min="1" max="30" value="5"/>
+    </div>
+    <div class="setting-row">
+      <span class="setting-label">Long break (min)</span>
+      <input class="setting-input" id="setLong" type="number" min="1" max="60" value="15"/>
+    </div>
+    <div class="setting-row">
+      <span class="setting-label">Sessions before long break</span>
+      <input class="setting-input" id="setSessions" type="number" min="2" max="8" value="4"/>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn" id="cancelBtn">Cancel</button>
+      <button class="modal-btn primary" id="saveBtn">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── State ──
+let config = {
+  focus: 25,
+  short: 5,
+  long: 15,
+  sessionsBeforeLong: 4,
+  sound: true
+};
+
+// Load saved config
+try {
+  const saved = JSON.parse(localStorage.getItem('focus_config') || '{}');
+  Object.assign(config, saved);
+} catch(e){}
+
+let stats = { sessions: 0, minutes: 0, streak: 0, lastDate: null };
+try {
+  const savedStats = JSON.parse(localStorage.getItem('focus_stats') || '{}');
+  Object.assign(stats, savedStats);
+  // Check streak
+  const today = new Date().toDateString();
+  const yesterday = new Date(Date.now() - 86400000).toDateString();
+  if (stats.lastDate !== today && stats.lastDate !== yesterday) {
+    stats.streak = 0;
+  }
+} catch(e){}
+
+const MODES = {
+  focus: { label: 'focus',       color: '#7CB98A', dimColor: 'rgba(124,185,138,0.07)', btnClass: '' },
+  short: { label: 'short break', color: '#C9966A', dimColor: 'rgba(201,150,106,0.07)', btnClass: 'break' },
+  long:  { label: 'long break',  color: '#7499C9', dimColor: 'rgba(116,153,201,0.07)', btnClass: 'long-break' }
+};
+
+let mode = 'focus';
+let sessionCount = 0;      // completed focus sessions
+let running = false;
+let intervalId = null;
+let totalSeconds = config.focus * 60;
+let secondsLeft = totalSeconds;
+
+// ── DOM ──
+const timerDisplay = document.getElementById('timerDisplay');
+const timerLabel   = document.getElementById('timerLabel');
+const playBtn      = document.getElementById('playBtn');
+const resetBtn     = document.getElementById('resetBtn');
+const skipBtn      = document.getElementById('skipBtn');
+const ringProgress = document.getElementById('ringProgress');
+const sessionDots  = document.getElementById('sessionDots');
+const modalOverlay = document.getElementById('modalOverlay');
+const settingsBtn  = document.getElementById('settingsBtn');
+const cancelBtn    = document.getElementById('cancelBtn');
+const saveBtn      = document.getElementById('saveBtn');
+const soundBtn     = document.getElementById('soundBtn');
+const toast        = document.getElementById('toast');
+const ambientOrb   = document.getElementById('ambientOrb');
+
+// Ring setup
+const CIRCUMFERENCE = 2 * Math.PI * 130;
+ringProgress.style.strokeDasharray = CIRCUMFERENCE;
+
+// ── Init ──
+applyMode(mode);
+renderDots();
+renderStats();
+updateDisplay();
+
+// ── Mode tabs ──
+document.querySelectorAll('.mode-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    if (running) stopTimer();
+    switchMode(tab.dataset.mode);
+    document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+  });
+});
+
+function switchMode(newMode) {
+  mode = newMode;
+  applyMode(mode);
+  resetTimer();
+}
+
+function applyMode(m) {
+  const def = MODES[m];
+  ringProgress.style.stroke = def.color;
+  playBtn.className = `play-btn ${def.btnClass}`;
+  timerLabel.textContent = def.label;
+  timerLabel.style.color = def.color;
+  ambientOrb.style.background = `radial-gradient(circle,${def.dimColor} 0%,transparent 70%)`;
+
+  totalSeconds = (m === 'focus' ? config.focus : m === 'short' ? config.short : config.long) * 60;
+  secondsLeft = totalSeconds;
+}
+
+// ── Timer logic ──
+function startTimer() {
+  if (secondsLeft <= 0) return;
+  running = true;
+  playBtn.textContent = '▐▐';
+  playBtn.setAttribute('aria-label', 'Pause timer');
+  ambientOrb.classList.add('active');
+
+  intervalId = setInterval(() => {
+    secondsLeft--;
+    updateDisplay();
+    if (secondsLeft <= 0) {
+      clearInterval(intervalId);
+      running = false;
+      onTimerEnd();
+    }
+  }, 1000);
+}
+
+function stopTimer() {
+  clearInterval(intervalId);
+  running = false;
+  playBtn.textContent = '▶';
+  playBtn.setAttribute('aria-label', 'Start timer');
+}
+
+function resetTimer() {
+  stopTimer();
+  totalSeconds = (mode === 'focus' ? config.focus : mode === 'short' ? config.short : config.long) * 60;
+  secondsLeft = totalSeconds;
+  updateDisplay();
+  ambientOrb.classList.remove('active');
+}
+
+function onTimerEnd() {
+  playSound();
+  playBtn.textContent = '▶';
+  ambientOrb.classList.remove('active');
+
+  if (mode === 'focus') {
+    sessionCount++;
+    stats.sessions++;
+    stats.minutes += config.focus;
+    const today = new Date().toDateString();
+    if (stats.lastDate !== today) {
+      stats.streak++;
+      stats.lastDate = today;
+    }
+    saveStats();
+    renderStats();
+    renderDots();
+
+    const isLongBreak = sessionCount % config.sessionsBeforeLong === 0;
+    showToast(isLongBreak ? '🎉 Time for a long break!' : '✓ Session done! Take a short break.');
+
+    // Auto-switch to break
+    setTimeout(() => {
+      const breakMode = isLongBreak ? 'long' : 'short';
+      document.querySelectorAll('.mode-tab').forEach(t => {
+        t.classList.toggle('active', t.dataset.mode === breakMode);
+      });
+      switchMode(breakMode);
+    }, 1200);
+  } else {
+    showToast('Break over — ready to focus?');
+    setTimeout(() => {
+      document.querySelectorAll('.mode-tab').forEach(t => {
+        t.classList.toggle('active', t.dataset.mode === 'focus');
+      });
+      switchMode('focus');
+    }, 1200);
+  }
+}
+
+function updateDisplay() {
+  const m = Math.floor(secondsLeft / 60);
+  const s = secondsLeft % 60;
+  timerDisplay.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+
+  // Ring
+  const progress = secondsLeft / totalSeconds;
+  const offset = CIRCUMFERENCE * progress;
+  ringProgress.style.strokeDashoffset = offset;
+
+  // Page title
+  document.title = running ? `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')} · Focus` : 'Focus';
+}
+
+// ── Session dots ──
+function renderDots() {
+  sessionDots.innerHTML = '';
+  const total = config.sessionsBeforeLong;
+  for (let i = 0; i < total; i++) {
+    const dot = document.createElement('div');
+    const posInCycle = sessionCount % total;
+    dot.className = 'session-dot' +
+      (i < posInCycle ? ' done' : '') +
+      (i === posInCycle && running ? ' active' : '');
+    sessionDots.appendChild(dot);
+  }
+}
+
+// ── Stats ──
+function renderStats() {
+  document.getElementById('statSessions').textContent = stats.sessions;
+  document.getElementById('statMinutes').textContent = stats.minutes;
+  document.getElementById('statStreak').textContent = stats.streak;
+}
+
+function saveStats() {
+  localStorage.setItem('focus_stats', JSON.stringify(stats));
+}
+
+// ── Controls ──
+playBtn.addEventListener('click', () => {
+  if (running) stopTimer(); else startTimer();
+});
+
+resetBtn.addEventListener('click', () => resetTimer());
+
+skipBtn.addEventListener('click', () => {
+  stopTimer();
+  secondsLeft = 0;
+  onTimerEnd();
+});
+
+// ── Settings ──
+settingsBtn.addEventListener('click', () => {
+  document.getElementById('setFocus').value = config.focus;
+  document.getElementById('setShort').value = config.short;
+  document.getElementById('setLong').value = config.long;
+  document.getElementById('setSessions').value = config.sessionsBeforeLong;
+  modalOverlay.classList.add('open');
+});
+
+cancelBtn.addEventListener('click', () => modalOverlay.classList.remove('open'));
+modalOverlay.addEventListener('click', e => { if (e.target === modalOverlay) modalOverlay.classList.remove('open'); });
+
+saveBtn.addEventListener('click', () => {
+  config.focus  = Math.max(1, parseInt(document.getElementById('setFocus').value) || 25);
+  config.short  = Math.max(1, parseInt(document.getElementById('setShort').value) || 5);
+  config.long   = Math.max(1, parseInt(document.getElementById('setLong').value) || 15);
+  config.sessionsBeforeLong = Math.max(2, parseInt(document.getElementById('setSessions').value) || 4);
+  localStorage.setItem('focus_config', JSON.stringify(config));
+  modalOverlay.classList.remove('open');
+  stopTimer();
+  applyMode(mode);
+  renderDots();
+  showToast('Settings saved');
+});
+
+// ── Sound ──
+soundBtn.addEventListener('click', () => {
+  config.sound = !config.sound;
+  soundBtn.textContent = config.sound ? '🔔' : '🔕';
+  soundBtn.style.opacity = config.sound ? '1' : '0.5';
+});
+
+function playSound() {
+  if (!config.sound) return;
+  try {
+    const ac = new (window.AudioContext || window.webkitAudioContext)();
+
+    // Two-tone chime
+    [[523, 0], [659, 0.15], [784, 0.3]].forEach(([freq, delay]) => {
+      const osc = ac.createOscillator();
+      const gain = ac.createGain();
+      osc.connect(gain); gain.connect(ac.destination);
+      osc.frequency.value = freq;
+      osc.type = 'sine';
+      const t = ac.currentTime + delay;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.18, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.8);
+      osc.start(t); osc.stop(t + 0.85);
+    });
+  } catch(e){}
+}
+
+// ── Toast ──
+let toastTimeout;
+function showToast(msg) {
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => toast.classList.remove('show'), 3200);
+}
+
+// ── Keyboard ──
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.code === 'Space') { e.preventDefault(); playBtn.click(); }
+  if (e.code === 'KeyR') resetBtn.click();
+  if (e.code === 'KeyS') skipBtn.click();
+});
+
+// ── Animate dots while running ──
+setInterval(() => { if (running) renderDots(); }, 1000);
+</script>
+</body>
+</html>
